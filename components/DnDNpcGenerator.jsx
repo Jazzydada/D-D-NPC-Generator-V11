@@ -69,23 +69,37 @@ function generateName(race,gender){
   const first=roll(pool);
   const last=(entry.surname&&entry.surname.length)?roll(entry.surname):(names.human.surname?roll(names.human.surname):"");
   return `${first} ${last}`.trim();
+// English-only, no "/imagine prompt:" prefix (for Midjourney web)
+function seedFromString(s = "") {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return (h % 99999) + 1;
 }
 
-function seedFromString(s=""){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return (h%99999)+1}
-function buildMidjourneyPrompt(npc){
-  const genderOut=displayGenderFor(npc.race,npc.gender,t.en);
-  const parts=[
+function buildMidjourneyPromptWeb(npc) {
+  // Always output English, even if UI language is Danish
+  const genderOut = displayGenderFor(npc.race, npc.gender, t.en); // "Unrevealed" for hidden-gender races
+
+  // If your trait tables might be Danish, prefer the EN text when available:
+  // (Optional) Pass englishTraits from your tables module if you have it handy.
+  const appearance = npc.appearance; // replace with englishTraits.appearances lookup if needed
+  const speech     = npc.speech;     // "
+  const movement   = npc.movement;   // "
+  const demeanor   = npc.demeanor;   // "
+
+  const parts = [
     "fantasy character portrait, head & shoulders",
     `${npc.race} ${genderOut} ${npc.profession}`,
-    `demeanor: ${npc.demeanor}`,
-    `appearance details: ${npc.appearance}`,
-    `speaking style: ${npc.speech}`,
-    `movement vibe: ${npc.movement}`,
+    `demeanor: ${demeanor}`,
+    `appearance details: ${appearance}`,
+    `speaking style: ${speech}`,
+    `movement vibe: ${movement}`,
     "rich lighting, painterly detail, sharp focus, neutral background, subtle costume matching the role, color harmony, (no modern items), (no text)"
   ];
-  const body=parts.join(", ");
-  const seed=seedFromString(npc.name||`${npc.race}-${npc.profession}`);
-  return `/imagine prompt: ${body} --ar 2:3 --v 6 --style raw --s 250 --seed ${seed}`;
+
+  const seed = seedFromString(npc.name || `${npc.race}-${npc.profession}`);
+  // No "/imagine prompt:" prefix; parameters at the end are fine for web input
+  return `${parts.join(", ")} --ar 2:3 --v 6 --style raw --s 250 --seed ${seed}`;
 }
 
 export default function DnDNpcGenerator({embed=false}){
@@ -154,7 +168,13 @@ ${tr.fields.demeanor}: ${npc.demeanor}`,[npc,tr]);
       <div className="flex flex-wrap gap-3">
         <button className="px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700" onClick={()=>copy(textOut)}>{tr.buttons.copyText}</button>
         <button className="px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700" onClick={()=>copy(jsonOut)}>{tr.buttons.copyJson}</button>
-        <button className="px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white" onClick={()=>copy(buildMidjourneyPrompt(npc))}>Copy (Midjourney)</button>
+       <button
+  className="px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white"
+  onClick={() => copy(buildMidjourneyPromptWeb({ ...npc }))}
+  title="Copy an English Midjourney prompt for the web UI"
+>
+  Copy (Midjourney Web)
+</button>
       </div>
     </div>
 
