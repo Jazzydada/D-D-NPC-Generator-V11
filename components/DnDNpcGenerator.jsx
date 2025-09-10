@@ -61,15 +61,28 @@ function weightedGender(){const r=Math.random()*100; if(r<48)return"Male"; if(r<
 const roll=(arr)=>arr[Math.floor(Math.random()*arr.length)];
 const weightedRoll=(items,weightMap)=>{const w=items.map(it=>weightMap[it]??1);const tot=w.reduce((a,b)=>a+b,0);let r=Math.random()*tot;for(let i=0;i<items.length;i++){if(r<w[i])return items[i];r-=w[i]}return items[items.length-1]};
 
-function generateName(race,gender){
-  const key=(raceMap[race]||race||"").toLowerCase().replace(/\s+|[()]/g,"");
-  const entry=names[key]||names.human;
-  let pool=(gender==="Male"&&entry.male)?entry.male:(gender==="Female"&&entry.female)?entry.female:[...(entry.male||[]),...(entry.female||[])];
-  if(!pool.length) pool=["Alex","Morgan","Rin","Kael","Rowan"];
-  const first=roll(pool);
-  const last=(entry.surname&&entry.surname.length)?roll(entry.surname):(names.human.surname?roll(names.human.surname):"");
+function generateName(race, gender) {
+  const key = (raceMap[race] || race || "")
+    .toLowerCase()
+    .replace(/\s+|[()]/g, "");
+  const entry = names[key] || names.human;
+
+  let pool =
+    (gender === "Male" && entry.male) ? entry.male :
+    (gender === "Female" && entry.female) ? entry.female :
+    [ ...(entry.male || []), ...(entry.female || []) ];
+
+  if (!pool.length) pool = ["Alex", "Morgan", "Rin", "Kael", "Rowan"];
+
+  const first = roll(pool);
+  const last = (entry.surname && entry.surname.length)
+    ? roll(entry.surname)
+    : (names.human.surname ? roll(names.human.surname) : "");
+
   return `${first} ${last}`.trim();
-// English-only, no "/imagine prompt:" prefix (for Midjourney web)
+} // <-- IMPORTANT: close the function here
+
+// ---------- Midjourney (web) helpers: English-only, no "/imagine" ----------
 function seedFromString(s = "") {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
@@ -77,15 +90,11 @@ function seedFromString(s = "") {
 }
 
 function buildMidjourneyPromptWeb(npc) {
-  // Always output English, even if UI language is Danish
-  const genderOut = displayGenderFor(npc.race, npc.gender, t.en); // "Unrevealed" for hidden-gender races
-
-  // If your trait tables might be Danish, prefer the EN text when available:
-  // (Optional) Pass englishTraits from your tables module if you have it handy.
-  const appearance = npc.appearance; // replace with englishTraits.appearances lookup if needed
-  const speech     = npc.speech;     // "
-  const movement   = npc.movement;   // "
-  const demeanor   = npc.demeanor;   // "
+  const genderOut = displayGenderFor(npc.race, npc.gender, t.en); // "Unrevealed" if hidden-gender race
+  const appearance = npc.appearance;
+  const speech     = npc.speech;
+  const movement   = npc.movement;
+  const demeanor   = npc.demeanor;
 
   const parts = [
     "fantasy character portrait, head & shoulders",
@@ -98,10 +107,8 @@ function buildMidjourneyPromptWeb(npc) {
   ];
 
   const seed = seedFromString(npc.name || `${npc.race}-${npc.profession}`);
-  // No "/imagine prompt:" prefix; parameters at the end are fine for web input
   return `${parts.join(", ")} --ar 2:3 --v 6 --style raw --s 250 --seed ${seed}`;
 }
-
 export default function DnDNpcGenerator({embed=false}){
   const {lang,setLang,tr}=useLang();
   const [locks,setLocks]=useState({name:false,gender:false,race:false,profession:false,appearance:false,speech:false,movement:false,demeanor:false});
